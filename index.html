@@ -1,0 +1,483 @@
+<!-- Chosen Palette: Earth & Terracotta (from user image) -->
+<!-- Application Structure Plan: This is a unified application combining two previous designs. It uses a single-page dashboard structure with thematic navigation (Panorama, Autonomías, Violencias, Resistencia). This architecture was chosen to provide both a high-level overview (via 'semaforo' cards) and deep, interactive exploration (via tabs and dynamic filters), telling a comprehensive story of challenges and agency. The user flow is guided by a sticky nav, but the content is structured to encourage non-linear exploration, especially within the tabbed 'Autonomías' section and the filterable 'Violencias' chart. -->
+<!-- Visualization & Content Choices: 
+- Panorama: Uses 'semaforo' cards (HTML/CSS) from the first design to provide an instant visual summary of key indicators (Goal: Inform).
+- Autonomías Section: Employs a tabbed interface (from the second design) to organize a large volume of information. Each tab is a mini-dashboard containing multiple charts from both original designs (Bar, Doughnut) to compare data and show changes over time, supported by contextual text (Goal: Compare, Inform, Organize).
+- Violencias Section: Retains the powerful, dual-filter interactive chart (from the second design), allowing users to dynamically compare data for women vs. the total indigenous population across different metrics (Goal: Explore, Compare).
+- Resistencia Section: Uses a structured HTML layout to explain the strategic indigenous-led initiatives, shifting the narrative to empowerment (Goal: Explain, Organize).
+All visualizations are rendered on Canvas (Chart.js), with no SVG or Mermaid JS used. -->
+<!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Día de la Mujer Indígena: Derechos, Voz y Resistencia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-background: #F4F1E8;
+            --color-text-primary: #4C2B1B;
+            --color-text-secondary: #78533E;
+            --color-primary: #D16B3E;
+            --color-secondary: #A0522D;
+            --color-accent: #3A4A6A;
+            --color-surface: #FFFFFF;
+            --color-border: #E0D8C8;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--color-background);
+            color: var(--color-text-primary);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin: auto;
+            height: 300px;
+            max-height: 350px;
+        }
+        .main-chart-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            max-height: 500px;
+        }
+        @media (min-width: 768px) {
+            .chart-container { height: 350px; }
+            .main-chart-container { height: 450px; }
+        }
+        nav a { color: var(--color-text-secondary); }
+        nav a:hover, .tab-btn:hover { background-color: #F0EBE3; color: var(--color-primary); }
+        nav a.active {
+            font-weight: 700;
+            color: var(--color-primary);
+            border-bottom-color: var(--color-primary);
+        }
+        .tab-btn {
+             color: var(--color-text-secondary);
+             border-bottom: 2px solid transparent;
+        }
+        .tab-btn.active {
+            background-color: var(--color-primary);
+            color: var(--color-surface);
+            border-bottom-color: var(--color-primary);
+        }
+        .population-filter-btn {
+            border: 1px solid var(--color-secondary);
+            color: var(--color-secondary);
+        }
+        .population-filter-btn:hover { background-color: #F0EBE3; }
+        .population-filter-btn.active {
+            background-color: var(--color-secondary);
+            color: white;
+            border-color: var(--color-secondary);
+        }
+        .progress-green { background-color: #e8f5e9; border-left-color: #66bb6a; }
+        .progress-yellow { background-color: #fffde7; border-left-color: #ffee58; }
+        .progress-red { background-color: #ffebee; border-left-color: #ef5350; }
+        .hero-section {
+            background-image: url('https://i.ibb.co/xJnt2X8/dia-mujer-indigena-banner.png');
+            background-size: cover;
+            background-position: top left;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white/90 backdrop-blur-md sticky top-0 z-50 shadow-sm border-b border-[var(--color-border)]">
+        <nav class="container mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <h1 class="text-lg font-bold text-[var(--color-primary)] truncate">Voz y Dignidad Indígena</h1>
+                <div class="hidden md:flex items-center space-x-4">
+                    <a href="#panorama" class="px-3 py-2 rounded-md text-sm font-medium border-b-2">Panorama</a>
+                    <a href="#autonomias" class="px-3 py-2 rounded-md text-sm font-medium border-b-2">Autonomías</a>
+                    <a href="#violencias" class="px-3 py-2 rounded-md text-sm font-medium border-b-2">Violencias</a>
+                    <a href="#resistencia" class="px-3 py-2 rounded-md text-sm font-medium border-b-2">Resistencia</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <section class="relative hero-section rounded-lg shadow-xl overflow-hidden h-96 mb-16 flex items-center justify-center text-center text-white">
+            <div class="absolute inset-0 bg-black/50"></div>
+            <div class="relative z-10 p-4">
+                <h1 class="text-4xl font-black tracking-tight sm:text-5xl md:text-6xl">
+                    <span class="block">Día de la Mujer Indígena</span>
+                    <span class="block text-orange-300 mt-2">Voz, Resistencia y Derechos</span>
+                </h1>
+                <p class="mt-4 max-w-md mx-auto text-base sm:text-lg md:mt-6 md:text-xl md:max-w-3xl">
+                   Honramos la fuerza de las mujeres indígenas de Colombia. Este panel visibiliza sus luchas, sus logros y los caminos que tejen para garantizar una vida digna y en paz.
+                </p>
+            </div>
+        </section>
+
+        <section id="panorama" class="py-12 bg-[var(--color-surface)] rounded-lg shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center">
+                    <h2 class="text-3xl font-extrabold">Panorama General: Indicadores Clave</h2>
+                    <p class="mt-4 text-lg text-[var(--color-text-secondary)]">Un vistazo rápido a los avances y desafíos más significativos.</p>
+                </div>
+                <div class="mt-10 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+                    <div class="p-6 rounded-lg border-l-4 progress-green">
+                        <h3 class="text-lg font-bold text-green-800">Educación (Alfabetismo)</h3>
+                        <p class="mt-2 text-3xl font-semibold">81.2%</p>
+                        <p class="text-[var(--color-text-secondary)] text-sm">Tasa de alfabetismo (2018), un avance de +11.4 puntos desde 2005.</p>
+                        <p class="mt-2 font-medium text-green-700">Progreso Significativo</p>
+                    </div>
+                    <div class="p-6 rounded-lg border-l-4 progress-red">
+                        <h3 class="text-lg font-bold text-red-800">Salud (Mortalidad Materna)</h3>
+                        <p class="mt-2 text-3xl font-semibold">3.3 veces mayor</p>
+                        <p class="text-[var(--color-text-secondary)] text-sm">Razón de mortalidad vs. mujeres no indígenas. Una brecha crítica.</p>
+                         <p class="mt-2 font-medium text-red-700">Desafío Crítico</p>
+                    </div>
+                    <div class="p-6 rounded-lg border-l-4 progress-green">
+                        <h3 class="text-lg font-bold text-green-800">Protección (Reparación)</h3>
+                        <p class="mt-2 text-3xl font-semibold">+68,000</p>
+                        <p class="text-[var(--color-text-secondary)] text-sm">Mujeres indígenas han recibido indemnización como medida de reparación.</p>
+                        <p class="mt-2 font-medium text-green-700">En Progreso</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="autonomias" class="py-16">
+            <h2 class="text-3xl font-bold text-center mb-2">Las Cuatro Autonomías: Pilares de Vida en Disputa</h2>
+            <p class="text-center text-[var(--color-text-secondary)] max-w-2xl mx-auto mb-8">Navegue por las pestañas para explorar cada dimensión del bienestar y los derechos de las mujeres indígenas.</p>
+            <div class="bg-[var(--color-surface)] p-6 rounded-lg shadow-lg">
+                <div class="mb-6 flex flex-wrap justify-center gap-2 border-b border-[var(--color-border)]">
+                    <button class="tab-btn active px-4 py-2 text-sm font-semibold rounded-t-md" data-tab="economica">Económica</button>
+                    <button class="tab-btn px-4 py-2 text-sm font-semibold rounded-t-md" data-tab="fisica">Física</button>
+                    <button class="tab-btn px-4 py-2 text-sm font-semibold rounded-t-md" data-tab="politica">Política</button>
+                    <button class="tab-btn px-4 py-2 text-sm font-semibold rounded-t-md" data-tab="cultural">Cultural</button>
+                </div>
+                <div id="tab-content" class="min-h-[400px]">
+                    <div id="economica" class="tab-panel">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                             <div>
+                                <h3 class="text-2xl font-bold text-[var(--color-primary)] mb-3">Brechas y Avances Económicos</h3>
+                                <p class="text-[var(--color-text-secondary)] mb-4">La autonomía económica es clave. Aunque la participación laboral ha mejorado, la pobreza multidimensional sigue siendo 2.7 veces mayor en hogares indígenas que en el promedio nacional, una brecha ligada directamente a la seguridad territorial.</p>
+                            </div>
+                            <div class="bg-[var(--color-background)] p-4 rounded-lg">
+                                <h4 class="font-bold text-center mb-2">Tasa Global de Participación Laboral</h4>
+                                 <div class="chart-container" style="height:250px">
+                                    <canvas id="laborChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="fisica" class="tab-panel hidden">
+                        <h3 class="text-2xl font-bold text-[var(--color-primary)] mb-4 text-center">Autonomía Física: Vida y Salud en Riesgo</h3>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                            <div class="bg-[var(--color-surface)] p-6 rounded-lg border border-[var(--color-border)]">
+                                <h4 class="text-xl font-bold text-center">Brecha en Mortalidad Materna</h4>
+                                <p class="text-center text-[var(--color-text-secondary)] mb-4 text-sm">RMM por 100.000 nacidos vivos.</p>
+                                <div class="chart-container" style="height: 280px;">
+                                    <canvas id="mmrChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="bg-[#fbe9e7] p-6 rounded-lg">
+                               <h4 class="text-xl font-bold text-red-900">Avances Normativos y Culturales</h4>
+                               <p class="mt-2 text-gray-700">A pesar de la brecha, hay avances cruciales:</p>
+                               <ul class="mt-3 space-y-3 list-disc list-inside text-gray-600 text-sm">
+                                   <li><strong>Ley 2244 de 2022 (Parto Digno):</strong> Abre la puerta a prácticas culturalmente adecuadas.</li>
+                                   <li><strong>Sentencia T-128 de 2022:</strong> Ordena integrar la partería tradicional al Sistema de Salud, un paso histórico para reconocer saberes ancestrales.</li>
+                               </ul>
+                               <p class="mt-4 text-sm font-semibold text-red-800">Estos hitos son fundamentales para que las mujeres indígenas decidan sobre sus cuerpos y su salud.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="politica" class="tab-panel hidden">
+                        <div class="text-center p-8">
+                             <h3 class="text-2xl font-bold text-[var(--color-primary)] mb-3">Autonomía Política: Liderazgos Amenazados</h3>
+                            <p class="text-[var(--color-text-secondary)] max-w-2xl mx-auto">Aunque su participación en gobiernos propios aumenta, su representación en espacios de poder nacional es mínima. Las lideresas que defienden el territorio y los derechos humanos enfrentan persecución y asesinato. Su participación efectiva en la toma de decisiones, incluyendo la consulta previa, sigue siendo una deuda del Estado.</p>
+                        </div>
+                    </div>
+                    <div id="cultural" class="tab-panel hidden">
+                         <h3 class="text-2xl font-bold text-[var(--color-primary)] mb-4 text-center">Autonomía Cultural y Educativa</h3>
+                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                            <div class="bg-[var(--color-surface)] p-6 rounded-lg border border-[var(--color-border)]">
+                                <h4 class="text-xl font-bold text-center">Gran Salto en Alfabetismo</h4>
+                                <p class="text-center text-[var(--color-text-secondary)] mb-4 text-sm">Tasa en mujeres indígenas de 5+ años.</p>
+                                <div class="chart-container" style="height:280px">
+                                    <canvas id="literacyChart"></canvas>
+                                </div>
+                            </div>
+                             <div class="bg-[var(--color-surface)] p-6 rounded-lg border border-[var(--color-border)]">
+                                <h4 class="text-xl font-bold text-center">Brecha de Conectividad Digital</h4>
+                                <p class="text-center text-[var(--color-text-secondary)] mb-4 text-sm">Hogares en resguardos con internet (2022).</p>
+                                <div class="chart-container" style="height:280px">
+                                    <canvas id="connectivityChart"></canvas>
+                                </div>
+                            </div>
+                         </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="violencias" class="py-16">
+            <h2 class="text-3xl font-extrabold text-center">Múltiples Violencias: Conflicto y Género</h2>
+            <p class="text-center text-[var(--color-text-secondary)] max-w-3xl mx-auto mb-8">Explore los datos del impacto desproporcionado del conflicto armado y la crisis de violencia de género sobre las mujeres y los pueblos indígenas. Use los filtros para comparar y analizar las cifras.</p>
+            <div class="bg-[var(--color-surface)] p-6 rounded-lg shadow-lg">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4 flex-wrap">
+                    <div id="interactive-chart-title" class="text-xl font-bold"></div>
+                    <div class="flex items-center gap-4">
+                        <div id="population-filter-container" class="flex items-center space-x-2">
+                             <button class="population-filter-btn active" data-population="mujeres">Mujeres</button>
+                             <button class="population-filter-btn" data-population="total">Total Indígena</button>
+                        </div>
+                        <select id="chart-filter" class="w-full sm:w-auto p-2 border border-[var(--color-border)] rounded-md bg-white focus:ring-2 focus:ring-[var(--color-primary)]">
+                            <option value="departments">Víctimas por Depto.</option>
+                            <option value="actions">Hechos Victimizantes</option>
+                            <option value="vbg">VBG (Nacional 2024)</option>
+                        </select>
+                    </div>
+                </div>
+                <p id="interactive-chart-desc" class="text-[var(--color-text-secondary)] mb-4 text-sm"></p>
+                <div class="main-chart-container">
+                    <canvas id="interactiveChart"></canvas>
+                </div>
+                <p class="text-center text-xs text-gray-400 mt-2">Fuentes: Unidad para las Víctimas (RUV) y SIVIGE (2024).</p>
+            </div>
+        </section>
+        
+        <section id="resistencia" class="py-16">
+            <h2 class="text-3xl font-extrabold text-center">Resistencia y Futuro: Soberanía de Datos</h2>
+            <p class="text-center text-[var(--color-text-secondary)] max-w-3xl mx-auto mb-8">Ante la invisibilidad estadística, las mujeres indígenas, lideradas por la CNMI, impulsan la creación de una red de observatorios de género propios como estrategia clave para la defensa de sus derechos.</p>
+            <div class="bg-[var(--color-surface)] p-8 rounded-lg shadow-lg">
+                 <h3 class="text-2xl font-bold text-center text-[var(--color-primary)] mb-6">Objetivos de los Observatorios de Género Indígenas</h3>
+                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-center">
+                    <div class="flex flex-col items-center">
+                        <div class="bg-[#f0e6dd] p-4 rounded-full mb-3 text-3xl">📊</div>
+                        <h4 class="font-bold">Combatir el Subregistro</h4>
+                        <p class="text-sm text-[var(--color-text-secondary)]">Documentar la magnitud real de las violencias basadas en género.</p>
+                    </div>
+                     <div class="flex flex-col items-center">
+                        <div class="bg-[#f0e6dd] p-4 rounded-full mb-3 text-3xl">✍️</div>
+                        <h4 class="font-bold">Generar Datos Propios</h4>
+                        <p class="text-sm text-[var(--color-text-secondary)]">Producir conocimiento con pertinencia cultural para la toma de decisiones.</p>
+                    </div>
+                     <div class="flex flex-col items-center">
+                        <div class="bg-[#f0e6dd] p-4 rounded-full mb-3 text-3xl">🗣️</div>
+                        <h4 class="font-bold">Incidir en Políticas</h4>
+                        <p class="text-sm text-[var(--color-text-secondary)]">Exigir al Estado acciones efectivas y presupuesto con base en evidencia.</p>
+                    </div>
+                     <div class="flex flex-col items-center">
+                        <div class="bg-[#f0e6dd] p-4 rounded-full mb-3 text-3xl">🤝</div>
+                        <h4 class="font-bold">Activar Rutas de Atención</h4>
+                        <p class="text-sm text-[var(--color-text-secondary)]">Fortalecer sistemas de protección y respuestas culturalmente adecuadas.</p>
+                    </div>
+                 </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-[var(--color-surface)] mt-16 border-t border-[var(--color-border)]">
+        <div class="container mx-auto py-6 px-4 text-center text-[var(--color-text-secondary)]">
+            <p class="text-sm">Panel interactivo conmemorando el Día Internacional de la Mujer Indígena.</p>
+        </div>
+    </footer>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        let chartInstances = {};
+        
+        const palette = {
+            primary: 'rgba(209, 107, 62, 1)',
+            primaryLight: 'rgba(209, 107, 62, 0.7)',
+            secondary: 'rgba(160, 82, 45, 1)',
+            accent: 'rgba(58, 74, 106, 1)',
+            neutral: 'rgba(120, 83, 62, 0.7)',
+            red: 'rgba(200, 76, 76, 1)',
+            green: 'rgba(106, 137, 107, 1)'
+        };
+
+        const chartTooltipTitleCallback = (tooltipItems) => {
+            const item = tooltipItems[0];
+            let label = item.chart.data.labels[item.dataIndex];
+            if (Array.isArray(label)) return label.join(' ');
+            return label;
+        };
+        
+        const wrapLabel = (label, maxLength = 16) => {
+            if (typeof label !== 'string' || label.length <= maxLength) return label;
+            const words = label.split(' ');
+            const lines = [];
+            let currentLine = '';
+            words.forEach(word => {
+                if ((currentLine + ' ' + word).trim().length > maxLength && currentLine.length > 0) {
+                    lines.push(currentLine.trim());
+                    currentLine = word;
+                } else {
+                    currentLine = (currentLine + ' ' + word).trim();
+                }
+            });
+            if (currentLine) lines.push(currentLine.trim());
+            return lines;
+        };
+
+        const createChart = (canvasId, config) => {
+            const ctx = document.getElementById(canvasId)?.getContext('2d');
+            if (ctx && !chartInstances[canvasId]) {
+                chartInstances[canvasId] = new Chart(ctx, config);
+            }
+        };
+
+        const chartConfigs = {
+            laborChart: {
+                type: 'bar',
+                data: {
+                    labels: ['Línea Base 2018', 'Avance 2025 (proy.)'],
+                    datasets: [
+                        { label: 'Mujeres Indígenas', data: [45.2, 49.5], backgroundColor: palette.primary },
+                        { label: 'Promedio Nacional Mujeres', data: [53.1, 55.0], backgroundColor: palette.accent }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
+            },
+            mmrChart: {
+                type: 'bar',
+                data: {
+                    labels: ['Mujeres Indígenas', 'Mujeres no Indígenas'],
+                    datasets: [{
+                        label: 'Razón de Mortalidad Materna',
+                        data: [125.1, 38.0], backgroundColor: [palette.red, palette.neutral], borderWidth: 1
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }
+            },
+            literacyChart: {
+                type: 'bar',
+                data: {
+                    labels: ['Censo 2005', 'Censo 2018'],
+                    datasets: [{
+                        label: 'Tasa de Alfabetismo',
+                        data: [69.8, 81.2], backgroundColor: [palette.neutral, palette.green], borderWidth: 1
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            },
+            connectivityChart: {
+                type: 'doughnut',
+                data: {
+                    labels: ['Con Internet', 'Sin Internet'],
+                    datasets: [{
+                        data: [11.2, 88.8], backgroundColor: [palette.green, '#fceae5'], hoverOffset: 4
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            },
+            interactiveChart: {
+                type: 'bar', data: {}, 
+                options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false }, tooltip: { callbacks: { title: chartTooltipTitleCallback } } } }
+            }
+        };
+
+        const dataStore = {
+            departments: {
+                mujeres: { title: 'Mujeres Víctimas del Conflicto por Departamento', labels: ['CHOCÓ', 'CAUCA', 'NARIÑO', 'ANTIOQUIA', 'PUTUMAYO', 'CÓRDOBA', 'TOLIMA'], data: [47312, 46759, 25385, 19882, 19865, 15454, 11014] },
+                total: { title: 'Total Víctimas Indígenas del Conflicto por Departamento', labels: ['CAUCA', 'CHOCÓ', 'NARIÑO', 'PUTUMAYO', 'ANTIOQUIA', 'CÓRDOBA', 'TOLIMA'], data: [89584, 71004, 50384, 41542, 39516, 34255, 24130] }
+            },
+            actions: {
+                mujeres: { title: 'Hechos Victimizantes (Mujeres Indígenas)', labels: ['Desplazamiento forzado', 'Amenaza', 'Homicidio', 'Actos terroristas', 'Delitos sexuales', 'Confinamiento'], data: [326168, 22693, 8094, 6778, 5469, 5057] },
+                total: { title: 'Hechos Victimizantes (Total Población Indígena)', labels: ['Desplazamiento forzado', 'Confinamiento', 'Amenaza', 'Homicidio', 'Actos terroristas', 'Desaparición forzada'], data: [443117, 34519, 17856, 16655, 6037, 3106] }
+            },
+            vbg: { title: 'Tipos de Violencia contra Mujeres (Nacional 2024)', description: 'En 2024, se reportaron 79,351 casos de violencia contra mujeres a nivel nacional. Los 2,011 casos contra mujeres indígenas se enmarcan en esta crisis, agravada por barreras de acceso a la justicia y un profundo subregistro.', labels: ['Violencia Física', 'Violencia Sexual', 'Violencia Psicológica', 'Negligencia y Abandono'], data: [39599, 21039, 10103, 8609] }
+        };
+
+        const topicFilter = document.getElementById('chart-filter');
+        const populationButtons = document.querySelectorAll('.population-filter-btn');
+        const populationFilterContainer = document.getElementById('population-filter-container');
+
+        const updateInteractiveChart = () => {
+            const selectedTopic = topicFilter.value;
+            const selectedPopulation = document.querySelector('.population-filter-btn.active').dataset.population;
+            let dataConfig;
+
+            if (selectedTopic === 'vbg') {
+                populationFilterContainer.classList.add('hidden');
+                dataConfig = dataStore.vbg;
+            } else {
+                populationFilterContainer.classList.remove('hidden');
+                dataConfig = dataStore[selectedTopic][selectedPopulation];
+            }
+
+            document.getElementById('interactive-chart-title').textContent = dataConfig.title;
+            document.getElementById('interactive-chart-desc').innerHTML = dataConfig.description || '';
+
+            const chart = chartInstances['interactiveChart'];
+            if (chart) {
+                chart.data.labels = dataConfig.labels.map(l => wrapLabel(l));
+                chart.data.datasets = [{
+                    label: 'Número de Víctimas',
+                    data: dataConfig.data,
+                    backgroundColor: palette.primaryLight,
+                    borderColor: palette.primary,
+                    borderWidth: 1
+                }];
+                chart.update();
+            }
+        };
+        
+        createChart('interactiveChart', chartConfigs.interactiveChart);
+        updateInteractiveChart();
+        topicFilter.addEventListener('change', updateInteractiveChart);
+        populationButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                populationButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                updateInteractiveChart();
+            });
+        });
+        
+        const tabs = document.querySelectorAll('.tab-btn');
+        const panels = document.querySelectorAll('.tab-panel');
+        
+        const initTabCharts = (tabId) => {
+            if (tabId === 'economica') createChart('laborChart', chartConfigs.laborChart);
+            else if (tabId === 'fisica') createChart('mmrChart', chartConfigs.mmrChart);
+            else if (tabId === 'cultural') {
+                createChart('literacyChart', chartConfigs.literacyChart);
+                createChart('connectivityChart', chartConfigs.connectivityChart);
+            }
+        };
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                const targetTabId = tab.getAttribute('data-tab');
+                panels.forEach(panel => {
+                    panel.classList.toggle('hidden', panel.id !== targetTabId);
+                });
+                initTabCharts(targetTabId);
+            });
+        });
+        
+        initTabCharts('economica');
+
+        const navLinks = document.querySelectorAll('nav a');
+        const sections = document.querySelectorAll('main section');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    navLinks.forEach(link => {
+                        const href = link.getAttribute('href');
+                        link.classList.toggle('active', href === `#${entry.target.id}`);
+                    });
+                }
+            });
+        }, { rootMargin: '-50% 0px -50% 0px', threshold: 0 });
+        sections.forEach(section => observer.observe(section));
+    });
+    </script>
+</body>
+</html>
